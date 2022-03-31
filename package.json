@@ -1,0 +1,26 @@
+{
+  "name": "basic-event-organization",
+  "version": "1.0.0",
+  "description": "A project to create events and sell/transfer tickets",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahsanwtc/basic-event-organization.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ahsanwtc/basic-event-organization/issues"
+  },
+  "homepage": "https://github.com/ahsanwtc/basic-event-organization#readme",
+  "dependencies": {
+    "@openzeppelin/test-helpers": "^0.5.15"
+  }
+}
