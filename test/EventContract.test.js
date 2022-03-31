@@ -9,15 +9,15 @@ const EventContract = artifacts.require("EventContract");
 contract("EventContract", accounts => {
   let eventContract = null;
 
-  before(async () => {
+  before('get instance of the contract', async () => {
     eventContract = await EventContract.new();
   });
 
   it('should create an event', async () => {
     const price = 10, date = (await time.latest()).add(time.duration.seconds(4000)).toNumber(), ticketCount = 10;
-    await eventContract.createEvent('Event', date, price, ticketCount, { from: accounts[0] });
+    await eventContract.createEvent('Event One', date, price, ticketCount, { from: accounts[0] });
     const event = await eventContract.events(0);
-    assert(event.name === 'Event');
+    assert(event.name === 'Event One');
     assert(event.price.toNumber() === price);
     assert(event.date.toNumber() === date);
     assert(event.ticketCount.toNumber() === ticketCount);
@@ -41,45 +41,61 @@ contract("EventContract", accounts => {
     );
   });
 
-  context('buyTickt', () => {
-    let event = null;
-    before(async () => {
+  context('there is an event', () => {
+    let event = null, eventId = null;
+    
+    before('before there is an event', async () => {
       const price = 10, date = (await time.latest()).add(time.duration.seconds(4000)).toNumber(), ticketCount = 10;
-      await eventContract.createEvent('Event', date, price, ticketCount, { from: accounts[0] });
+      await eventContract.createEvent('Event Two', date, price, ticketCount, { from: accounts[0] });
       event = await eventContract.events(0);
+      eventId = event.id.toNumber();
     });
 
     it('should buy tickets', async () => {
       const quantity = 4;
-      await eventContract.buyTicket(event.id, quantity, { from: accounts[1], value: quantity * event.price });
-      assert((await eventContract.tickets(accounts[1], event.id)).toNumber() === quantity);
-      assert((await eventContract.events(event.id)).ticketRemaining.toNumber() === (event.ticketCount -  quantity));
+      await eventContract.buyTicket(event.id.toNumber(), quantity, { from: accounts[1], value: quantity * event.price.toNumber() });
+      assert((await eventContract.tickets(accounts[1], 0)).toNumber() === quantity);
+      assert((await eventContract.events(event.id.toNumber())).ticketRemaining.toNumber() === (event.ticketCount.toNumber() -  quantity));
     });
 
     it('should NOT buy tickets when no enough tickts left', async () => {
       const quantity = 11;
-      expectRevert(
-        eventContract.buyTicket(event.id, quantity, { from: accounts[1], value: quantity * event.price }),
+      await expectRevert(
+        eventContract.buyTicket(event.id.toNumber(), quantity, { from: accounts[1], value: quantity * event.price.toNumber() }),
         'not enough tickets left'
       );
     });
 
     it('should NOT buy tickets when not enough ether sent', async () => {
       const quantity = 5;
-      expectRevert(
-        eventContract.buyTicket(event.id, quantity, { from: accounts[1], value: (quantity * event.price) - 5 }),
+      await expectRevert(
+        eventContract.buyTicket(event.id.toNumber(), quantity, { from: accounts[1], value: (quantity * event.price.toNumber()) - 5 }),
         'not enough ether sent'
       );
     });
 
     it('should NOT buy tickets when event does not exist', async () => {
       const quantity = 5;
-      expectRevert(
-        eventContract.buyTicket(1, quantity, { from: accounts[1], value: (quantity * event.price) - 5 }),
+      await expectRevert(
+        eventContract.buyTicket(5, quantity, { from: accounts[1], value: (quantity * event.price.toNumber()) }),
         'event does not exist'
       );
     });
 
+    it('should transfer ticket', async () => {
+      const quantity = 2;
+      await eventContract.transferTicket(event.id.toNumber(), quantity, accounts[3], { from: accounts[1] });
+      assert((await eventContract.tickets(accounts[1], event.id.toNumber())).toNumber() === 2);
+      assert((await eventContract.tickets(accounts[3], event.id.toNumber())).toNumber() === 2);
+    });
+
+    it('should NOT transfer ticket if quantity is too high', async () => {
+      const quantity = 5;
+      await expectRevert(
+        eventContract.transferTicket(event.id.toNumber(), quantity, accounts[3], { from: accounts[1] }),
+        'not enough tickets'
+      );      
+    });
   });
 
   context('event is not active anymore', () => {
@@ -93,12 +109,37 @@ contract("EventContract", accounts => {
 
     it('should NOT buy tickets', async () => {
       const quantity = 5;
-      expectRevert(
-        eventContract.buyTicket(0, quantity, { from: accounts[1], value: (quantity * event.price) }),
+      await expectRevert(
+        eventContract.buyTicket(event.id.toNumber(), quantity, { from: accounts[1], value: (quantity * event.price.toNumber()) }),
         'event is not active anymore'
       );
     });
 
+    it('should NOT transfer tickets', async () => {
+      const quantity = 2;
+      await expectRevert(
+        eventContract.transferTicket(event.id.toNumber(), quantity, accounts[3], { from: accounts[1] }),
+        'event is not active anymore'
+      );      
+    });
+  });
+
+  context('there is no event', () => {
+    it('should NOT buy tickets', async () => {
+      const quantity = 5;
+      await expectRevert(
+        eventContract.buyTicket(5, quantity, { from: accounts[1], value: 10 }),
+        'event does not exist'
+      );
+    });
+
+    it('should NOT transfer tickets', async () => {
+      const quantity = 2;
+      await expectRevert(
+        eventContract.transferTicket(5, quantity, accounts[3], { from: accounts[1] }),
+        'event does not exist'
+      );      
+    });
   });
 
 });

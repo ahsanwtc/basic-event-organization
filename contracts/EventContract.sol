@@ -38,7 +38,7 @@ contract EventContract {
   }
 
   modifier eventExist(uint eventId) {
-    require(events[eventId].date > 0, "event does not exist");
+    require(events[eventId].date != 0, "event does not exist");
     _;
   }
 
