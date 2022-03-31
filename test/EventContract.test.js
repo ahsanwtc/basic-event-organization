@@ -80,13 +80,18 @@ contract("EventContract", accounts => {
       );
     });
 
-    it('should NOT buy tickets when event is not active', async () => {
-      const eventContract = await EventContract.new();
+  });
+
+  context('event is not active anymore', () => {
+    let event = null;
+    before(async () => {
       const price = 10, date = (await time.latest()).add(time.duration.seconds(5)).toNumber(), ticketCount = 10;
       await eventContract.createEvent('Event', date, price, ticketCount, { from: accounts[0] });
-      const event = await eventContract.events(0);
+      event = await eventContract.events(0);
       await time.increase(5001);
+    });
 
+    it('should NOT buy tickets', async () => {
       const quantity = 5;
       expectRevert(
         eventContract.buyTicket(0, quantity, { from: accounts[1], value: (quantity * event.price) }),
